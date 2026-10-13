@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>供应链库存健康度诊断看板</title>
+<style>
+ body{font-family:"Microsoft YaHei",system-ui,sans-serif;background:#f4f6fa;margin:0;padding:28px;color:#1b2430}
+ h1{font-size:26px;margin:0 0 4px} .sub{color:#6b7684;font-size:13px;margin-bottom:22px}
+ .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+ .kpi{background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+ .kpi .v{font-size:24px;font-weight:700;color:#2F5597} .kpi .k{font-size:12px;color:#6b7684;margin-top:4px}
+ .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+ .card{background:#fff;border-radius:10px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+ .card h3{font-size:14px;margin:0 0 14px;color:#2F5597}
+ .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:12px}
+ .lb{width:170px;text-align:right;color:#41505f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .track{flex:1;background:#eef1f6;border-radius:4px;height:16px;overflow:hidden}
+ .track i{display:block;height:100%;border-radius:4px}
+ .vl{width:92px;font-variant-numeric:tabular-nums;color:#1b2430}
+ table{width:100%;border-collapse:collapse;font-size:12px}
+ th{background:#2F5597;color:#fff;padding:8px;text-align:left;font-weight:600}
+ td{padding:7px 8px;border-bottom:1px solid #eef1f6}
+ tr:nth-child(even) td{background:#fafbfd}
+ .wide{grid-column:1/-1}
+ .note{font-size:12px;color:#6b7684;margin-top:10px;line-height:1.7}
+</style></head><body>
+<h1>供应链库存健康度诊断与安全库存优化</h1>
+<div class="sub">数据源 DataCo Smart Supply Chain · 180,519 条订单明细 · 2015.01–2018.01 · 分析日期 2026-10</div>
+
+<div class="kpis">
+ <div class="kpi"><div class="v">180,519</div><div class="k">订单明细记录</div></div>
+ <div class="kpi"><div class="v">118</div><div class="k">商品 SKU</div></div>
+ <div class="kpi"><div class="v">57.28%</div><div class="k">订单延期率</div></div>
+ <div class="kpi"><div class="v">76.87%</div><div class="k">A类贡献销售额</div></div>
+ <div class="kpi"><div class="v">1,782</div><div class="k">安全库存建议(件)</div></div>
+</div>
+
+<div class="grid">
+<div class="card"><h3>ABC 分类：各类销售额占比</h3><div class="bars">
+<div class="bar-row"><span class="lb">A</span><span class="track"><i style="width:100.0%;background:#2F5597"></i></span><span class="vl">76.87%</span></div>
+<div class="bar-row"><span class="lb">B</span><span class="track"><i style="width:23.5%;background:#2F5597"></i></span><span class="vl">18.09%</span></div>
+<div class="bar-row"><span class="lb">C</span><span class="track"><i style="width:6.6%;background:#2F5597"></i></span><span class="vl">5.04%</span></div>
+</div></div>
+<div class="card"><h3>ABC-XYZ 九宫格：各格销售额占比</h3><div class="bars">
+<div class="bar-row"><span class="lb">A-X</span><span class="track"><i style="width:100.0%;background:#4472C4"></i></span><span class="vl">76.87%</span></div>
+<div class="bar-row"><span class="lb">B-X</span><span class="track"><i style="width:15.4%;background:#4472C4"></i></span><span class="vl">11.84%</span></div>
+<div class="bar-row"><span class="lb">B-Z</span><span class="track"><i style="width:7.5%;background:#4472C4"></i></span><span class="vl">5.74%</span></div>
+<div class="bar-row"><span class="lb">C-Y</span><span class="track"><i style="width:3.9%;background:#4472C4"></i></span><span class="vl">2.97%</span></div>
+<div class="bar-row"><span class="lb">C-Z</span><span class="track"><i style="width:2.6%;background:#4472C4"></i></span><span class="vl">2.03%</span></div>
+<div class="bar-row"><span class="lb">B-Y</span><span class="track"><i style="width:0.7%;background:#4472C4"></i></span><span class="vl">0.50%</span></div>
+<div class="bar-row"><span class="lb">C-X</span><span class="track"><i style="width:0.1%;background:#4472C4"></i></span><span class="vl">0.05%</span></div>
+</div></div>
+<div class="card"><h3>各配送方式延期率</h3><div class="bars">
+<div class="bar-row"><span class="lb">Standard Class</span><span class="track"><i style="width:39.8%;background:#C00000"></i></span><span class="vl">39.80%</span></div>
+<div class="bar-row"><span class="lb">Second Class</span><span class="track"><i style="width:79.7%;background:#C00000"></i></span><span class="vl">79.70%</span></div>
+<div class="bar-row"><span class="lb">First Class</span><span class="track"><i style="width:100.0%;background:#C00000"></i></span><span class="vl">100.00%</span></div>
+<div class="bar-row"><span class="lb">Same Day</span><span class="track"><i style="width:47.8%;background:#C00000"></i></span><span class="vl">47.80%</span></div>
+</div></div>
+<div class="card"><h3>延期最严重的 Top10 区域</h3><div class="bars">
+<div class="bar-row"><span class="lb">Central Africa</span><span class="track"><i style="width:100.0%;background:#ED7D31"></i></span><span class="vl">60.70%</span></div>
+<div class="bar-row"><span class="lb">Western Europe</span><span class="track"><i style="width:96.4%;background:#ED7D31"></i></span><span class="vl">58.50%</span></div>
+<div class="bar-row"><span class="lb">South Asia</span><span class="track"><i style="width:96.4%;background:#ED7D31"></i></span><span class="vl">58.50%</span></div>
+<div class="bar-row"><span class="lb">South of  USA </span><span class="track"><i style="width:95.7%;background:#ED7D31"></i></span><span class="vl">58.10%</span></div>
+<div class="bar-row"><span class="lb">Southeast Asia</span><span class="track"><i style="width:95.6%;background:#ED7D31"></i></span><span class="vl">58.00%</span></div>
+<div class="bar-row"><span class="lb">East of USA</span><span class="track"><i style="width:95.6%;background:#ED7D31"></i></span><span class="vl">58.00%</span></div>
+<div class="bar-row"><span class="lb">East Africa</span><span class="track"><i style="width:94.7%;background:#ED7D31"></i></span><span class="vl">57.50%</span></div>
+<div class="bar-row"><span class="lb">West Asia</span><span class="track"><i style="width:94.7%;background:#ED7D31"></i></span><span class="vl">57.50%</span></div>
+<div class="bar-row"><span class="lb">Eastern Europe</span><span class="track"><i style="width:94.6%;background:#ED7D31"></i></span><span class="vl">57.40%</span></div>
+<div class="bar-row"><span class="lb">South America</span><span class="track"><i style="width:94.2%;background:#ED7D31"></i></span><span class="vl">57.20%</span></div>
+</div></div>
+<div class="card"><h3>各市场销售额占比</h3><div class="bars">
+<div class="bar-row"><span class="lb">Europe</span><span class="track"><i style="width:100.0%;background:#70AD47"></i></span><span class="vl">29.56%</span></div>
+<div class="bar-row"><span class="lb">LATAM</span><span class="track"><i style="width:94.5%;background:#70AD47"></i></span><span class="vl">27.94%</span></div>
+<div class="bar-row"><span class="lb">Pacific Asia</span><span class="track"><i style="width:76.1%;background:#70AD47"></i></span><span class="vl">22.49%</span></div>
+<div class="bar-row"><span class="lb">USCA</span><span class="track"><i style="width:46.6%;background:#70AD47"></i></span><span class="vl">13.77%</span></div>
+<div class="bar-row"><span class="lb">Africa</span><span class="track"><i style="width:21.1%;background:#70AD47"></i></span><span class="vl">6.24%</span></div>
+</div></div>
+<div class="card"><h3>销售额 Top10 商品</h3><div class="bars">
+<div class="bar-row"><span class="lb">Field & Stream Sportsman 1</span><span class="track"><i style="width:100.0%;background:#7030A0"></i></span><span class="vl">6,929,654</span></div>
+<div class="bar-row"><span class="lb">Perfect Fitness Perfect Ri</span><span class="track"><i style="width:63.8%;background:#7030A0"></i></span><span class="vl">4,421,143</span></div>
+<div class="bar-row"><span class="lb">Diamondback Women's Serene</span><span class="track"><i style="width:59.4%;background:#7030A0"></i></span><span class="vl">4,118,426</span></div>
+<div class="bar-row"><span class="lb">Nike Men's Free 5.0+ Runni</span><span class="track"><i style="width:52.9%;background:#7030A0"></i></span><span class="vl">3,667,633</span></div>
+<div class="bar-row"><span class="lb">Nike Men's Dri-FIT Victory</span><span class="track"><i style="width:45.4%;background:#7030A0"></i></span><span class="vl">3,147,800</span></div>
+<div class="bar-row"><span class="lb">Pelican Sunstream 100 Kaya</span><span class="track"><i style="width:44.7%;background:#7030A0"></i></span><span class="vl">3,099,845</span></div>
+<div class="bar-row"><span class="lb">Nike Men's CJ Elite 2 TD F</span><span class="track"><i style="width:41.7%;background:#7030A0"></i></span><span class="vl">2,891,758</span></div>
+<div class="bar-row"><span class="lb">O'Brien Men's Neoprene Lif</span><span class="track"><i style="width:41.7%;background:#7030A0"></i></span><span class="vl">2,888,994</span></div>
+<div class="bar-row"><span class="lb">Under Armour Girls' Toddle</span><span class="track"><i style="width:18.3%;background:#7030A0"></i></span><span class="vl">1,269,083</span></div>
+<div class="bar-row"><span class="lb">Dell Laptop</span><span class="track"><i style="width:9.6%;background:#7030A0"></i></span><span class="vl">663,000</span></div>
+</div></div>
+<div class="card wide"><h3>ABC-XYZ 分类明细与库存策略</h3>
+<table><tr><th>格子</th><th>SKU 数</th><th>销售额占比</th><th>平均 CV</th><th>平均安全库存</th><th>管理策略</th></tr>
+<tr><td><b>A-X</b></td><td>7</td><td>76.87%</td><td>0.353</td><td>91.9</td><td>核心稳定品|JIT准时制,低安全库存,高频小批补货,盯周转</td></tr><tr><td><b>B-X</b></td><td>4</td><td>11.84%</td><td>0.178</td><td>74.3</td><td>常规稳定品|系统自动补货,经济订货批量EOQ</td></tr><tr><td><b>B-Y</b></td><td>3</td><td>0.5%</td><td>0.677</td><td>7.0</td><td>常规波动品|定期review,适度安全库存</td></tr><tr><td><b>B-Z</b></td><td>9</td><td>5.74%</td><td>4.692</td><td>30.3</td><td>常规高危品|提高安全库存或替换供应商/合并SKU</td></tr><tr><td><b>C-X</b></td><td>2</td><td>0.05%</td><td>0.0</td><td>29.3</td><td>长尾稳定品|简化管理,大批量低频次采购</td></tr><tr><td><b>C-Y</b></td><td>42</td><td>2.97%</td><td>0.702</td><td>6.4</td><td>长尾波动品|按订单采购,尽量降低持有</td></tr><tr><td><b>C-Z</b></td><td>51</td><td>2.03%</td><td>3.591</td><td>4.3</td><td>长尾高危品|考虑淘汰/替代,避免占用资金与仓储</td></tr>
+</table></div>
+</div>
+<div class="note">
+口径说明：ABC 按累计销售额 80%/95% 分界；XYZ 按月度需求变异系数 CV（≤0.5 为 X，0.5–1 为 Y，&gt;1 为 Z）。
+安全库存 SS = Z × σ<sub>d</sub> × √L，Z=1.65（95% 服务水平），σ<sub>d</sub> 为周需求标准差，L 为实际提前期（周）。
+</div>
+</body></html>

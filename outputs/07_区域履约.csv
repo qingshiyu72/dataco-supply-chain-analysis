@@ -1,0 +1,24 @@
+﻿Order Region,订单数,平均延期,延期率
+Canada,959,0.391,51.9
+Caribbean,8318,0.547,55.9
+Central Africa,1677,0.64,60.7
+Central America,28341,0.562,57.2
+Central Asia,553,0.646,57.1
+East Africa,1852,0.571,57.5
+East of USA,6915,0.585,58.0
+Eastern Asia,7280,0.566,56.7
+Eastern Europe,3920,0.58,57.4
+North Africa,3232,0.552,56.7
+Northern Europe,9792,0.547,56.4
+Oceania,10148,0.556,56.1
+South America,14935,0.556,57.2
+South Asia,7731,0.597,58.5
+South of  USA ,4045,0.58,58.1
+Southeast Asia,9539,0.558,58.0
+Southern Africa,1157,0.479,56.3
+Southern Europe,9431,0.516,56.7
+US Center ,5887,0.587,57.1
+West Africa,3696,0.551,55.0
+West Asia,6009,0.569,57.5
+West of USA ,7993,0.557,56.6
+Western Europe,27109,0.597,58.5

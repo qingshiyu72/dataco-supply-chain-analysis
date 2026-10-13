@@ -1,0 +1,42 @@
+# ===== 数据文件 =====
+# 数据体积大（DataCo 主表约 91MB），不适合放进 Git 仓库。
+# 克隆本项目后，请按 README「复现方式」从以下地址自行下载：
+#   阿里云天池: https://tianchi.aliyun.com/dataset/92708
+#   Kaggle:    https://www.kaggle.com/datasets/valentynvolkov/dataco-smart-supply-chain-analysis-in-bigquery
+data/*.csv
+data/*.xlsx
+data/*.zip
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== 敏感信息 =====
+# 密钥、token 一律不入库
+.env
+*.key
+.api_key
+
+# ===== 输出物（可选）=====
+# 若希望仓库保留分析结果，注释下面两行；
+# 若希望仓库只保留代码与文档，则取消注释。
+# outputs/*.csv
+# outputs/*.xlsx
+
+# ===== 本地过程材料（不入公开仓库）=====
+# 实操手册与全程实录是本地学习/复盘用的过程文档，不属于项目成果
+/供应链库存健康度诊断与安全库存优化-项目实操手册.md
+/项目全程实录.md
+
+# 运行日志为控制台重定向产物，中文编码已损坏，不入库
+outputs/run_log*.txt
