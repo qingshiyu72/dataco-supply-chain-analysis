@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-STEP 6 补充: XYZ 分类的双口径交叉验证
+STEP 6 补充: XYZ 分类的双口径敏感性检验
 问题: 按"周"聚合时, 118 个商品中 91 个被划为 Z 类(不稳定)。
       原因是订单数据在周粒度上过于稀疏 —— 一个商品一年 52 周里可能
       只有 10 周有订单, 其余 42 周被补 0, 把标准差抬得极高, CV 虚高。
 做法: 同时按"月"聚合再算一次 CV, 两个口径对比。
       月度粒度降低了稀疏性影响, 更接近计划部门实际的计划周期。
-结论: 以月度口径为主 (更稳健), 周度口径作为敏感性参考。
+定位: 主口径(月度)由 01_pipeline 产出; 本脚本只做独立复算与敏感性对比,
+      不回写主表和策略矩阵, 避免两个脚本互相覆盖。
 """
 import os
 import numpy as np
@@ -18,6 +19,13 @@ OUT = os.path.join(BASE, "outputs")
 
 df = pd.read_csv(RAW, encoding="latin-1")
 df["order_date"] = pd.to_datetime(df["order date (DateOrders)"], format="%m/%d/%Y %H:%M")
+# 与 01_pipeline 相同的乱码修复 + 去空格。原始表里有 4 个商品名带尾随空格
+# ("DVDs " / "Toys " / "Smart watch " / "Sports Books "), 不清洗就会在 reindex
+# 时匹配不上主表名字, 被算成均值 NaN -> CV=0 -> 误判为 X 类。
+df["Product Name"] = (df["Product Name"].astype(str)
+                      .str.encode("latin-1", errors="ignore")
+                      .str.decode("utf-8", errors="ignore")
+                      .str.strip())
 
 prod_master = pd.read_csv(os.path.join(OUT, "01_商品主表_含ABCXYZ.csv"))
 products = prod_master["Product Name"].tolist()
@@ -52,13 +60,19 @@ def label(cv):
         return "Y"
     return "Z"
 
-wk = cv_by_freq("W-MON", "周")
+# 注意: W-SUN = 以周日结尾的周(即周一起), 与 01_pipeline 的 to_period("W") 一致;
+# 若写成 W-MON, pandas 理解为"以周一结尾", 切割出的是周二~周一, 与主表对不上。
+wk = cv_by_freq("W-SUN", "周")
 mo = cv_by_freq("M", "月")
 
-comp = prod_master[["Product Name", "ABC", "销售额", "销量", "CV"]].rename(columns={"CV": "CV_周_旧"})
-comp = comp.merge(wk, on="Product Name").merge(mo, on="Product Name")
+comp = prod_master[["Product Name", "ABC", "销售额", "销量", "CV_周", "CV_月"]].rename(
+    columns={"CV_周": "CV_周_主表", "CV_月": "CV_月_主表"})
+comp = comp.merge(wk, on="Product Name", how="left").merge(mo, on="Product Name", how="left")
 comp["XYZ_周"] = comp["CV_周"].apply(label)
 comp["XYZ_月"] = comp["CV_月"].apply(label)
+# 独立复算 vs 主表: 两套实现分别算出 CV, 结果必须完全一致, 否则说明其中有 bug
+comp["复算一致"] = (((comp["CV_周"] - comp["CV_周_主表"]).abs() < 1e-9)
+                   & ((comp["CV_月"] - comp["CV_月_主表"]).abs() < 1e-9))
 
 print("=" * 70)
 print("XYZ 口径对比: 周 vs 月")
@@ -81,54 +95,18 @@ print("\n【月口径下 X 类商品】")
 print(comp[comp["XYZ_月"] == "X"].sort_values("CV_月")[
     ["Product Name", "ABC", "销售额", "CV_周", "CV_月"]].to_string(index=False))
 
-# 用月口径替换主表 XYZ, 重新导出
-final = prod_master.drop(columns=["CV", "XYZ"]).merge(
-    comp[["Product Name", "CV_月", "XYZ_月"]].rename(columns={"CV_月": "CV", "XYZ_月": "XYZ"}),
-    on="Product Name"
-)
-# 重算安全库存(基于月需求 -> 周需求)
-final = final.drop(columns=[c for c in ["安全库存", "再订货点", "安全库存/周需求"] if c in final.columns])
-final["提前期_周"] = (final["实际提前期均值"] / 7).round(4)
-final["安全库存"] = (1.65 * final["周需求标准差"] * np.sqrt(final["提前期_周"])).round(2)
-final["再订货点"] = (final["周需求均值"] * final["提前期_周"] + final["安全库存"]).round(2)
-final = final.sort_values("销售额", ascending=False)
-final.to_csv(os.path.join(OUT, "01_商品主表_含ABCXYZ.csv"), index=False, encoding="utf-8-sig")
+# 本脚本只做敏感性对比, 不回写主表与策略矩阵 —— 主口径统一由 01_pipeline 产出。
+# 否则先跑 02 再跑 01, 月口径会被覆盖回周口径, 两份输出互相打架。
+comp["口径判定"] = np.where(comp["XYZ_周"] == comp["XYZ_月"], "不变", "变动")
 comp.to_csv(os.path.join(OUT, "08_XYZ双口径对比.csv"), index=False, encoding="utf-8-sig")
 
-abc_xyz = final.groupby(["ABC", "XYZ"]).agg(
-    SKU数=("Product Name", "count"),
-    销售额=("销售额", "sum"),
-    平均CV=("CV", "mean"),
-    平均安全库存=("安全库存", "mean"),
-).reset_index()
-abc_xyz["销售额占比%"] = (abc_xyz["销售额"] / abc_xyz["销售额"].sum() * 100).round(2)
-abc_xyz["平均CV"] = abc_xyz["平均CV"].round(3)
-abc_xyz["平均安全库存"] = abc_xyz["平均安全库存"].round(2)
-abc_xyz["销售额"] = abc_xyz["销售额"].round(2)
-
-STRATEGY = {
-    ("A", "X"): "核心稳定品|JIT准时制,低安全库存,高频小批补货,盯周转",
-    ("A", "Y"): "核心波动品|重点管理,中等安全库存,滚动预测+周复盘",
-    ("A", "Z"): "核心高危品|最高优先级,高安全库存,与供应商签保供协议",
-    ("B", "X"): "常规稳定品|系统自动补货,经济订货批量EOQ",
-    ("B", "Y"): "常规波动品|定期review,适度安全库存",
-    ("B", "Z"): "常规高危品|提高安全库存或替换供应商/合并SKU",
-    ("C", "X"): "长尾稳定品|简化管理,大批量低频次采购",
-    ("C", "Y"): "长尾波动品|按订单采购,尽量降低持有",
-    ("C", "Z"): "长尾高危品|考虑淘汰/替代,避免占用资金与仓储",
-}
-abc_xyz["策略"] = abc_xyz.apply(lambda r: STRATEGY.get((r["ABC"], r["XYZ"]), ""), axis=1)
-abc_xyz.to_csv(os.path.join(OUT, "04_ABC_XYZ矩阵.csv"), index=False, encoding="utf-8-sig")
-
 print("\n" + "=" * 70)
-print("修正后 ABC-XYZ 矩阵 (月度口径)")
+print("与主表(01_pipeline 的结果)逐商品比对")
 print("=" * 70)
-print(abc_xyz.to_string(index=False))
-
-print("\n最终核心结论:")
-print(f"1. A类商品 {int((final['ABC']=='A').sum())} 个, "
-      f"贡献 {final.loc[final['ABC']=='A','销售额'].sum()/final['销售额'].sum()*100:.2f}% 销售额")
-for t in ["X", "Y", "Z"]:
-    sub = final[final["XYZ"] == t]
-    print(f"   {t}类 {len(sub)} 个, 销售额占比 {sub['销售额'].sum()/final['销售额'].sum()*100:.2f}%")
-print(f"2. 安全库存合计 {final['安全库存'].sum():,.0f} 件")
+print(f"CV 复算一致: {int(comp['复算一致'].sum())} / {len(comp)}")
+if not comp["复算一致"].all():
+    print("以下商品两套实现结果不一致, 需排查:")
+    print(comp.loc[~comp["复算一致"],
+                   ["Product Name", "CV_周_主表", "CV_周", "CV_月_主表", "CV_月"]].to_string(index=False))
+print(f"\n周/月口径间换了档的商品: {(comp['口径判定'] == '变动').sum()} 个")
+print("已导出:", os.path.join(OUT, "08_XYZ双口径对比.csv"))

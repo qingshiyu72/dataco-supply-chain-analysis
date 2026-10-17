@@ -175,11 +175,36 @@ def xyz_label(cv):
     return "Z"
 
 xyz["XYZ"] = xyz["CV"].apply(xyz_label)
-prod = prod.merge(xyz[["Product Name", "周需求均值", "周需求标准差", "CV", "XYZ"]],
+
+# 月口径: 订单在周粒度上过于稀疏(多数商品一年只有少数周有订单, 其余周补 0
+#         会把标准差抬高、CV 虚高), 月度粒度更接近计划部门实际的计划周期。
+#         因此以月度为主口径, 周度只作敏感性参考。
+df["month"] = df["order_date"].dt.to_period("M")
+mo = df.groupby(["Product Name", "month"])["Order Item Quantity"].sum()
+all_months = pd.period_range(df["month"].min(), df["month"].max(), freq="M")
+mo_idx = pd.MultiIndex.from_product([prod["Product Name"], all_months],
+                                    names=["Product Name", "month"])
+mo_full = mo.reindex(mo_idx, fill_value=0).reset_index()
+xyz_mo = mo_full.groupby("Product Name")["Order Item Quantity"].agg(
+    月需求均值="mean", 月需求标准差="std"
+).reset_index()
+xyz_mo["CV_月"] = (xyz_mo["月需求标准差"] / xyz_mo["月需求均值"].replace(0, np.nan)).round(4)
+xyz_mo["CV_月"] = xyz_mo["CV_月"].fillna(0)
+xyz_mo["XYZ_月"] = xyz_mo["CV_月"].apply(xyz_label)
+
+xyz = xyz.rename(columns={"CV": "CV_周", "XYZ": "XYZ_周"})
+prod = prod.merge(xyz[["Product Name", "周需求均值", "周需求标准差", "CV_周", "XYZ_周"]],
                   on="Product Name", how="left")
+prod = prod.merge(xyz_mo[["Product Name", "CV_月", "XYZ_月"]], on="Product Name", how="left")
 prod[["周需求均值", "周需求标准差"]] = prod[["周需求均值", "周需求标准差"]].round(2)
-print(prod["XYZ"].value_counts().to_string())
-print("\nCV 分布:")
+
+# CV / XYZ 取月口径(主口径); CV_周 / XYZ_周 保留作敏感性参考
+prod["CV"] = prod["CV_月"]
+prod["XYZ"] = prod["XYZ_月"]
+
+print("【周口径】"); print(prod["XYZ_周"].value_counts().to_string())
+print("\n【月口径(主口径)】"); print(prod["XYZ"].value_counts().to_string())
+print("\nCV 分布(月口径):")
 print(prod["CV"].describe().round(3).to_string())
 
 # ======================================================================
@@ -210,21 +235,42 @@ STRATEGY = {
     ("C", "Z"): "长尾高危品|考虑淘汰/替代,避免占用资金与仓储",
 }
 matrix["策略"] = matrix.apply(lambda r: STRATEGY.get((r["ABC"], r["XYZ"]), ""), axis=1)
-matrix.to_csv(os.path.join(OUT, "04_ABC_XYZ矩阵.csv"), index=False, encoding="utf-8-sig")
+# 导出放在 STEP 8 之后: 策略矩阵里要带上"平均安全库存", 依赖 STEP 8 的结果
 
 # ======================================================================
 sec("STEP 8  安全库存与再订货点")
 # 为什么: 这是把分析落成"可执行决策"的一步 —— 每个商品该备多少货
 # 公式: SS = Z x sigma_d x sqrt(L)
-#       Z=1.65 (95%服务水平), sigma_d=周需求标准差, L=提前期(周)
+#       Z 按 ABC 分档 (A 99% / B 95% / C 90%), sigma_d=周需求标准差, L=提前期(周)
 #       ROP = 周均需求 x L + SS
-# 结果: 每个商品的安全库存与再订货点建议值
+# 为什么分档: 服务水平每提高一档, 安全库存按 Z 值比例上升, 资金占用随之上升。
+#         统一用 95% 等于给"贡献 5% 销售额的长尾品"和"贡献 77% 的头部品"同样待遇,
+#         把管理资源平摊掉了 —— 这与 ABC 分类的初衷矛盾。
+# 结果: 每个商品按自身重要性定服务水平的安全库存与再订货点建议值
 # ======================================================================
-Z = 1.65  # 95% 服务水平
+Z_BY_ABC = {"A": 2.326, "B": 1.645, "C": 1.282}   # 99% / 95% / 90%
+SERVICE_BY_ABC = {"A": 99, "B": 95, "C": 90}
+prod["服务水平%"] = prod["ABC"].map(SERVICE_BY_ABC)
+prod["Z值"] = prod["ABC"].map(Z_BY_ABC)
 prod["提前期_周"] = (prod["实际提前期均值"] / 7).round(4)
-prod["安全库存"] = (Z * prod["周需求标准差"] * np.sqrt(prod["提前期_周"])).round(2)
+prod["安全库存"] = (prod["Z值"] * prod["周需求标准差"] * np.sqrt(prod["提前期_周"])).round(2)
 prod["再订货点"] = (prod["周需求均值"] * prod["提前期_周"] + prod["安全库存"]).round(2)
 prod["安全库存/周需求"] = (prod["安全库存"] / prod["周需求均值"].replace(0, np.nan)).round(2)
+
+# 分档 vs 统一 95% 的对比: 用来说明分档到底改变了什么
+ss_flat = (1.645 * prod["周需求标准差"] * np.sqrt(prod["提前期_周"])).sum()
+ss_tier = prod["安全库存"].sum()
+print(f"安全库存合计: 统一 Z=1.645(95%) -> {ss_flat:,.0f} 件; "
+      f"按 ABC 分档 -> {ss_tier:,.0f} 件 ({(ss_tier / ss_flat - 1) * 100:+.1f}%)")
+print("按 ABC 看安全库存去向:")
+print(prod.groupby("ABC")["安全库存"].agg(SKU数="count", 合计="sum", 平均="mean")
+      .round(2).to_string())
+
+# 策略矩阵补上"平均安全库存"后导出
+ss_avg = prod.groupby(["ABC", "XYZ"])["安全库存"].mean().round(2)
+ss_avg = ss_avg.rename("平均安全库存").reset_index()
+matrix = matrix.merge(ss_avg, on=["ABC", "XYZ"], how="left")
+matrix.to_csv(os.path.join(OUT, "04_ABC_XYZ矩阵.csv"), index=False, encoding="utf-8-sig")
 
 print("安全库存统计:")
 print(prod["安全库存"].describe().round(2).to_string())

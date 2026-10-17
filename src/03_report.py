@@ -26,6 +26,15 @@ sm = pd.read_csv(os.path.join(OUT, "05_配送方式履约.csv"))
 mk = pd.read_csv(os.path.join(OUT, "06_市场履约.csv"))
 rg = pd.read_csv(os.path.join(OUT, "07_区域履约.csv"))
 
+# 概览里的关键数字一律从主表实时算, 不写死 —— 否则脚本改了口径, 报告还是旧数字
+n_sku = len(prod)
+n_a = int((prod["ABC"] == "A").sum())
+a_share = prod.loc[prod["ABC"] == "A", "销售额"].sum() / prod["销售额"].sum() * 100
+n_a_pct = n_a / n_sku * 100
+n_x = int((prod["XYZ"] == "X").sum())
+n_z = int((prod["XYZ"] == "Z").sum())
+ss_total = prod["安全库存"].sum()
+
 # ---------------------------------------------------------------- Excel
 wb = Workbook()
 HDR = Font(bold=True, color="FFFFFF", size=11)
@@ -72,10 +81,10 @@ rows = [
     ["商品数", "118 个 SKU", "覆盖 5 大市场、23 个区域"],
     ["延期订单占比", "57.28%", "实际发货天数 > 计划发货天数"],
     ["平均延期天数", "1.62 天", "仅统计已延期订单"],
-    ["A 类商品", "7 个（占 SKU 5.93%）", "贡献 76.87% 销售额 —— 典型帕累托分布"],
-    ["X 类商品（需求稳定）", "13 个", "月需求 CV ≤ 0.5"],
-    ["Z 类商品（需求波动）", "60 个", "月需求 CV > 1.0"],
-    ["安全库存建议合计", "1,782 件", "95% 服务水平, Z=1.65"],
+    ["A 类商品", f"{n_a} 个（占 SKU {n_a_pct:.2f}%）", f"贡献 {a_share:.2f}% 销售额 —— 典型帕累托分布"],
+    ["X 类商品（需求稳定）", f"{n_x} 个", "月需求 CV ≤ 0.5"],
+    ["Z 类商品（需求波动）", f"{n_z} 个", "月需求 CV > 1.0"],
+    ["安全库存建议合计", f"{ss_total:,.0f} 件", "按 ABC 分档: A 99% / B 95% / C 90%"],
     ["最高延期区域", "Central Africa 60.7%", "全球平均延期率 57.28%"],
 ]
 for i, row in enumerate(rows, 1):
@@ -107,7 +116,7 @@ write_df(ws3, matrix, "ABC-XYZ 九宫格策略矩阵（月度口径）")
 
 # --- Sheet 4 商品明细
 ws4 = wb.create_sheet("4-商品明细")
-cols = ["Product Name", "ABC", "XYZ", "销售额", "销量", "订单数", "均价",
+cols = ["Product Name", "ABC", "XYZ", "服务水平%", "Z值", "销售额", "销量", "订单数", "均价",
         "周需求均值", "周需求标准差", "CV", "提前期_周", "安全库存", "再订货点", "延期率", "品类"]
 write_df(ws4, prod[cols].round(2), "商品级明细（含 ABC/XYZ 与安全库存建议）")
 ws4.column_dimensions["A"].width = 44
@@ -186,7 +195,7 @@ html = f"""<!DOCTYPE html>
  <div class="kpi"><div class="v">118</div><div class="k">商品 SKU</div></div>
  <div class="kpi"><div class="v">57.28%</div><div class="k">订单延期率</div></div>
  <div class="kpi"><div class="v">76.87%</div><div class="k">A类贡献销售额</div></div>
- <div class="kpi"><div class="v">1,782</div><div class="k">安全库存建议(件)</div></div>
+ <div class="kpi"><div class="v">{ss_total:,.0f}</div><div class="k">安全库存建议(件)</div></div>
 </div>
 
 <div class="grid">
@@ -202,8 +211,9 @@ html = f"""<!DOCTYPE html>
 </table></div>
 </div>
 <div class="note">
-口径说明：ABC 按累计销售额 80%/95% 分界；XYZ 按月度需求变异系数 CV（≤0.5 为 X，0.5–1 为 Y，&gt;1 为 Z）。
-安全库存 SS = Z × σ<sub>d</sub> × √L，Z=1.65（95% 服务水平），σ<sub>d</sub> 为周需求标准差，L 为实际提前期（周）。
+口径说明：ABC 按累计销售额 80%/95% 分界；XYZ 按月度需求变异系数 CV（≤0.5 为 X，0.5–1 为 Y，&gt;1 为 Z），周口径仅作敏感性参考。
+安全库存 SS = Z × σ<sub>d</sub> × √L，σ<sub>d</sub> 为周需求标准差，L 为实际提前期（周）。
+Z 按 ABC 分档：A 类 99%（Z=2.326）、B 类 95%（1.645）、C 类 90%（1.282）——服务水平随商品重要性递减，避免把管理资源平摊到长尾品上。
 </div>
 </body></html>"""
 
