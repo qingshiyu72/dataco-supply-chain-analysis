@@ -97,7 +97,8 @@ dataco-supply-chain-analysis/
 │   ├── 00_build_db.py     # 建 SQLite 库 + 用窗口函数做 ABC 分类 + 与 pandas 交叉校验
 │   ├── 01_pipeline.py     # 主分析管线（清洗→画像→ABC→XYZ→安全库存→履约诊断）
 │   ├── 02_xyz_dual.py     # XYZ 双口径（周/月）独立复算与敏感性对比
-│   └── 03_report.py       # 生成 Excel 报告与 HTML 看板
+│   ├── 03_report.py       # 生成 Excel 报告与 HTML 看板
+│   └── 04_data_validation.py  # 订单明细规则校验（等价类 / 边界值 / 口径一致性）
 ├── outputs/
 │   ├── 供应链库存分析报告.xlsx    # 5 个 Sheet + 原生图表
 │   ├── 库存分析看板.html         # 可视化看板
@@ -112,7 +113,8 @@ dataco-supply-chain-analysis/
 │   ├── 08_XYZ双口径对比.csv
 │   └── 09_SQL_ABC校验.csv        # SQL 口径的累计占比与档位（逐 SKU）
 ├── .gitignore                # 排除大体积数据文件
-└── README.md
+├── README.md
+└── 数据校验方案与实测报告.md   # 校验规则设计与实测结论（对应 src/04）
 ```
 
 **关于 SQLite**：180,519 行明细灌进 `order_items` 表并按 `Product Name` 建索引，ABC 的"按销售额降序 + 累计占比"用窗口函数一次算完：
@@ -140,6 +142,7 @@ python src/00_build_db.py    # 建 SQLite 库 + SQL 版 ABC + 交叉校验
 python src/01_pipeline.py    # 主分析管线（主口径由这里产出）
 python src/02_xyz_dual.py    # XYZ 双口径独立复算与敏感性对比
 python src/03_report.py      # 生成报告与看板
+python src/04_data_validation.py   # 可选：原始明细规则校验（结论见「数据校验方案与实测报告」）
 ```
 
 脚本使用相对路径（基于项目根目录自动定位 `data/`），**克隆后无需修改任何路径即可运行**。
